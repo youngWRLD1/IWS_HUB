@@ -1,0 +1,63 @@
+/* IWS HUB database setup / upgrade script */
+IF DB_ID(N'IWS Hub') IS NULL CREATE DATABASE [IWS Hub];
+GO
+USE [IWS Hub];
+GO
+
+IF OBJECT_ID(N'dbo.Users', N'U') IS NULL
+BEGIN
+CREATE TABLE dbo.Users(
+ StudentNumber NVARCHAR(20) NOT NULL CONSTRAINT PK_Users PRIMARY KEY,
+ FullName NVARCHAR(200) NOT NULL, StudentMail NVARCHAR(254) NULL, PhoneNumber NVARCHAR(20) NULL,
+ Title NVARCHAR(20) NULL, Gender NVARCHAR(30) NULL, Course NVARCHAR(150) NULL, CourseYear NVARCHAR(30) NULL,
+ Password NVARCHAR(255) NOT NULL, CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_Users_CreatedAt DEFAULT SYSDATETIME());
+END
+GO
+IF COL_LENGTH(N'dbo.Users',N'Course') IS NULL ALTER TABLE dbo.Users ADD Course NVARCHAR(150) NULL;
+IF COL_LENGTH(N'dbo.Users',N'CourseYear') IS NULL ALTER TABLE dbo.Users ADD CourseYear NVARCHAR(30) NULL;
+GO
+
+IF OBJECT_ID(N'dbo.GroupPosts', N'U') IS NULL
+BEGIN
+CREATE TABLE dbo.GroupPosts(
+ PostID INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_GroupPosts PRIMARY KEY,
+ StudentNumber NVARCHAR(20) NOT NULL, StudentName NVARCHAR(200) NOT NULL, PostContent NVARCHAR(MAX) NOT NULL,
+ PostedAt DATETIME2 NOT NULL CONSTRAINT DF_GroupPosts_PostedAt DEFAULT SYSDATETIME());
+END
+GO
+
+IF OBJECT_ID(N'dbo.PastPapers', N'U') IS NULL
+BEGIN
+CREATE TABLE dbo.PastPapers(
+ PaperID INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_PastPapers PRIMARY KEY, Module NVARCHAR(150) NOT NULL,
+ CourseCode NVARCHAR(50) NULL, CourseYear NVARCHAR(30) NULL, Semester NVARCHAR(30) NULL, [Year] INT NULL,
+ [Description] NVARCHAR(500) NULL, FilePath NVARCHAR(1000) NULL, FileName NVARCHAR(260) NULL,
+ FileData VARBINARY(MAX) NULL, UploadedBy NVARCHAR(20) NULL,
+ UploadedAt DATETIME2 NOT NULL CONSTRAINT DF_PastPapers_UploadedAt DEFAULT SYSDATETIME());
+END
+GO
+IF COL_LENGTH(N'dbo.PastPapers',N'FileName') IS NULL ALTER TABLE dbo.PastPapers ADD FileName NVARCHAR(260) NULL;
+IF COL_LENGTH(N'dbo.PastPapers',N'FileData') IS NULL ALTER TABLE dbo.PastPapers ADD FileData VARBINARY(MAX) NULL;
+GO
+
+IF OBJECT_ID(N'dbo.Admin', N'U') IS NULL
+BEGIN
+CREATE TABLE dbo.Admin(
+ AdminID INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Admin PRIMARY KEY,
+ Username NVARCHAR(100) NOT NULL CONSTRAINT UQ_Admin_Username UNIQUE, FullName NVARCHAR(200) NOT NULL,
+ Password NVARCHAR(255) NOT NULL, CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_Admin_CreatedAt DEFAULT SYSDATETIME());
+END
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.Admin WHERE Username=N'admin')
+ INSERT INTO dbo.Admin(Username,FullName,Password) VALUES(N'admin',N'IWS Hub Administrator',N'Admin@123');
+GO
+
+IF OBJECT_ID(N'dbo.SearchHistory', N'U') IS NULL
+CREATE TABLE dbo.SearchHistory(SearchID INT IDENTITY(1,1) PRIMARY KEY, StudentNumber NVARCHAR(20) NOT NULL, SearchTerm NVARCHAR(200) NOT NULL, SearchDate DATETIME2 NOT NULL DEFAULT SYSDATETIME());
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name=N'IX_GroupPosts_StudentNumber' AND object_id=OBJECT_ID(N'dbo.GroupPosts')) CREATE INDEX IX_GroupPosts_StudentNumber ON dbo.GroupPosts(StudentNumber);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name=N'IX_PastPapers_UploadedBy' AND object_id=OBJECT_ID(N'dbo.PastPapers')) CREATE INDEX IX_PastPapers_UploadedBy ON dbo.PastPapers(UploadedBy);
+GO
+
+/* Demo admin: username admin / password Admin@123. Change it before real deployment. */
